@@ -1,9 +1,6 @@
 import random
 import matplotlib.pyplot
 from PIL import Image
-
-
-
 class Maze:
     def __init__(self,size:tuple[int,int]) -> None:
         self.seed:int = random.randint(1,1000000)
@@ -16,6 +13,7 @@ class Maze:
         count:int = 1
         currentPos:int = 0
         path:list[int] = []
+        print("Creating maze...")
         while count < size[0]*size[1]:
             adjacents:dict[int:int] = self.getDirectedAdjacents(currentPos)
             availableDirections:list[int] = []
@@ -32,13 +30,10 @@ class Maze:
             self.array[nextPos]=self.array[nextPos]|0b00000010|self.byteForDirection((nextDirn-2)%4)
             currentPos = nextPos
             count+=1
-        
     def getCoord(self,index:int) -> tuple[int,int]:
         return (index//self.size[1],index%self.size[1])
-        
     def getIndex(self,coord:tuple[int,int]) -> int:
         return self.size[1]*coord[0]+coord[1]
-    
     def getDirectedAdjacents(self,index:int) -> dict[int:int]:
         adjacents:dict[int:int] = {}
         x,y = self.getCoord(index)
@@ -52,7 +47,6 @@ class Maze:
         if y-1>=0:
             adjacents[3] = self.getIndex((x,y-1))
         return adjacents
-        
     def byteForDirection(self,dirn:int) -> bytes:
         if dirn == 0:
             return 0b00000100
@@ -62,7 +56,6 @@ class Maze:
             return 0b00010000
         if dirn == 3:
             return 0b00100000
-            
     def imageForByte(self,byte:bytes,pixel:int,bw:int,bg:list[int],border:list[int]) -> list[list[list[int]]]:
         image:list[list[list[int]]] = [[bg for j in range(pixel)] for i in range(pixel)]
         for i in range(bw):
@@ -70,7 +63,6 @@ class Maze:
             image[pixel-i-1] = [border for j in range(pixel)]
         for i in range(bw,pixel-bw):
             image[i] = [border for j in range(bw)]+[bg for j in range(bw,pixel-bw)]+[border for j in range(bw)]
-        
         if byte & 0b00000100:
             for i in range(bw):
                 image[i] = [border for j in range(bw)]+[bg for j in range(bw,pixel-bw)]+[border for j in range(bw)]
@@ -86,7 +78,6 @@ class Maze:
                 for j in range(bw):
                     image[i][j] = bg
         return image
-
     def image(self,pixel:int,bw:int,bg:list[int],border:list[int]) -> None:
         image:list[list[list[int]]] = [[bg for j in range(self.size[1]*pixel)] for j in range(self.size[0]*pixel)]
         for i in range(self.size[0]):
@@ -98,7 +89,6 @@ class Maze:
                         image[i*pixel+p][j*pixel+q] = byteImage[p][q]
         matplotlib.pyplot.imshow(image)
         matplotlib.pyplot.show()
-
         flat:list[tuple] = []
         for x in range(self.size[0]*pixel):
             for y in range(self.size[1]*pixel):
@@ -107,8 +97,8 @@ class Maze:
         imageObject.putdata(flat)
         imageObject.save(f'maze{self.seed}.png')
         print(f"Image saved with name maze{self.seed}.png in the current directory")
-
     def solve(self) -> list[int]:
+        print("Finding solution path...")
         currentPos:int = 0
         targetPos:int = self.size[0]*self.size[1]-1
         path:list[int] = []
@@ -137,21 +127,46 @@ class Maze:
                 nextDirn = 3
             currentPos = adjacents[nextDirn]
         path.append(self.size[0]*self.size[1]-1)
+        self.array[0] = self.array[0]|0b00000100
         return path
-
-    
     def solutionImage(self,pixel:int,bw:int,bg:list[int],solBg:list[int],border:list[int],path:list[int]) -> None:
+        pixelCenter:int = pixel//2
         image:list[list[list[int]]] = [[bg for j in range(self.size[1]*pixel)] for j in range(self.size[0]*pixel)]
         for i in range(self.size[0]):
             for j in range(self.size[1]):
                 byte:bytes = self.array[self.getIndex((i,j))]
-                byteImage:list[list[list[int]]] = self.imageForByte(byte,pixel,bw,bg if self.getIndex((i,j)) not in path else solBg,border)
+                byteImage:list[list[list[int]]] = self.imageForByte(byte,pixel,bw,bg,border)
+                if self.getIndex((i,j)) in path:
+                    byteImage[pixelCenter][pixelCenter] = solBg
+                    bytePosInPath:int = path.index(self.getIndex((i,j)))
+                    prevSolByteIndex:int = path[bytePosInPath - 1 if bytePosInPath > 0 else -1]
+                    nextSolByteIndex:int = path[bytePosInPath + 1 if bytePosInPath < len(path)-1 else -1]
+                    dirnByte:bytes = 0b00000000
+                    adjacents:dict[int:int] = self.getDirectedAdjacents(self.getIndex((i,j)))
+                    for dirn in adjacents:
+                        if adjacents[dirn] == nextSolByteIndex or adjacents[dirn] == prevSolByteIndex:
+                            dirnByte = dirnByte|self.byteForDirection(dirn)
+                    if bytePosInPath == 0:
+                        dirnByte = dirnByte|0b00000100
+                    if bytePosInPath == len(path)-1:
+                        dirnByte = dirnByte|0b00010000
+                    if dirnByte & 0b00000100:
+                        for X in range(pixelCenter):
+                            byteImage[X][pixelCenter] = solBg
+                    if dirnByte & 0b00001000:
+                        for Y in range(pixelCenter,pixel):
+                            byteImage[pixelCenter][Y] = solBg
+                    if dirnByte & 0b00010000:
+                        for X in range(pixelCenter,pixel):
+                            byteImage[X][pixelCenter] = solBg
+                    if dirnByte & 0b00100000:
+                        for Y in range(pixelCenter):
+                            byteImage[pixelCenter][Y] = solBg
                 for p in range(pixel):
                     for q in range(pixel):
                         image[i*pixel+p][j*pixel+q] = byteImage[p][q]
         matplotlib.pyplot.imshow(image)
         matplotlib.pyplot.show()
-
         flat:list[tuple] = []
         for x in range(self.size[0]*pixel):
             for y in range(self.size[1]*pixel):
@@ -160,7 +175,8 @@ class Maze:
         imageObject.putdata(flat)
         imageObject.save(f'mazeSol{self.seed}.png')
         print(f"Solution image saved with name mazeSol{self.seed}.png in the current directory")
-
 myMaze:Maze = Maze((int(input("Height: ")),int(input("Width: "))))
+print("Making image...")
 myMaze.image(10,1,[0,0,0],[48,210,197])
-myMaze.solutionImage(10,1,[0,0,0],[255,255,255],[48,210,197],myMaze.solve())
+print("Making solution image...")
+myMaze.solutionImage(11,1,[0,0,0],[255,255,255],[48,210,197],myMaze.solve())
