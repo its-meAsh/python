@@ -1,11 +1,11 @@
 import random
-import matplotlib.pyplot
 from PIL import Image
+import os
 
 class Maze:
     def __init__(self,size:tuple[int,int]) -> None:
         self.size:tuple[int,int] = size
-        self.array:bytearray = [0b00000000 for _ in range(size[0]*size[1])]
+        self.array:bytearray = bytearray([0b00000000 for _ in range(size[0]*size[1])])
         self.cache:dict[bytes:list[list[list[int]]]] = {}
         self.cache2:dict[bytes:list[list[list[int]]]] = {}
     
@@ -192,7 +192,14 @@ class Maze:
         imageObject.putdata(flat)
         imageObject.save(f'mazeSol{self.seed}.png')
         return f'mazeSol{self.seed}.png'
-
+    
+    def binarySave(self) -> list[str,int]:
+        fname:str = f'mazeBin{self.seed}.bin'
+        file = open(fname,"wb")
+        file.write(self.array)
+        file.close()
+        return [fname,os.path.getsize(fname)]
+        
 myMaze:Maze = Maze((int(input("Height: ")),int(input("Width: "))))
 print("Creating maze...")
 seed:int = myMaze.generate()
@@ -205,3 +212,5 @@ myMaze.solve()
 print("Creating solution image...")
 solfname:str = myMaze.solutionImage(11,1,[0,0,0],[255,255,255],[48,210,197])
 print(f"Solution image saved with name {solfname} in the current directory")
+[binfname,binSize] = myMaze.binarySave()
+print(f"Binary file saved with name {binfname} in the current directory of size {binSize} bytes")
