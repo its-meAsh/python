@@ -19,7 +19,7 @@ class Maze:
     qVideoFx:bytes = 0b00100000
     sVideoFx:bytes = 0b01000000
     
-    def __init__(self,size:tuple[int,int],seed:int,name:str,dirname:str,qImage:bool,sImage:bool,binFile:bool,qFrames:bool,sFrames:bool,qVideo:bool,sVideo:bool,ppt:int,bw:int,border:list[int],bg:list[int],solBg:list[int],fps:int) -> None:
+    def __init__(self,size:tuple[int,int],seed:int,name:str,dirname:str,qImage:bool,sImage:bool,binFile:bool,qFrames:bool,sFrames:bool,qVideo:bool,sVideo:bool,ppt:int,bw:int,border:list[int],bg:list[int],solBg:list[int],fps:int,codec:str,extension:str) -> None:
         self.size:tuple[int,int] = size
         self.seed:int = seed if seed else random.randint(1,1000000)
         random.seed(self.seed)
@@ -41,6 +41,8 @@ class Maze:
         self.bg:list[int] = bg
         self.solbg:list[int] = solBg
         self.fps:int = fps
+        self.codec:str = codec
+        self.extension:str = extension
         
         self.array:bytearray = bytearray([self.emptyByte for _ in range(self.size[0]*self.size[1])])
         try:
@@ -255,7 +257,7 @@ class Maze:
 
 
     def saveVideo(self,path:str,name:str,images:list[list[list[list[int]]]],fps:int) -> None:
-        videoWriter = cv2.VideoWriter(f'{path}/{name}.mp4',cv2.VideoWriter_fourcc(*'MJPG'),fps,(self.size[1]*self.ppt,self.size[0]*self.ppt))
+        videoWriter = cv2.VideoWriter(f'{path}/{name}.{self.extension}',cv2.VideoWriter_fourcc(*f'{self.codec}'),fps,(self.size[1]*self.ppt,self.size[0]*self.ppt))
         for image in images:
             videoWriter.write(cv2.cvtColor(numpy.array(image,dtype=numpy.uint8),cv2.COLOR_RGB2BGR))
         videoWriter.release()
@@ -263,7 +265,37 @@ class Maze:
     
     def __call__(self) -> None:
         print(f'Maze: \n Seed: {self.seed} \n Height: {self.size[0]}, Width: {self.size[1]} \n Name: {self.name} \n Directory name: {self.dirname} \n Functionalities: \n  Question image: {bool(self.functionalities&self.qImageFx)} --- Size: {os.path.getsize(f"{self.dirname}/{self.name}QImage.png") if self.functionalities&self.qImageFx else 0} bytes \n  Solution image: {bool(self.functionalities&self.sImageFx)} --- Size: {os.path.getsize(f"{self.dirname}/{self.name}SImage.png") if self.functionalities&self.sImageFx else 0} bytes \n  Binary file save: {bool(self.functionalities&self.binFileFx)} --- Size: {os.path.getsize(f"{self.dirname}/{self.name}binFile.bin") if self.functionalities&self.binFileFx else 0} bytes \n  Question frames: {bool(self.functionalities&self.qFramesFx)} --- Size: {os.path.getsize(f"{self.dirname}/qFrames") if self.functionalities&self.qFramesFx else 0} bytes \n  Solution frames: {bool(self.functionalities&self.sFramesFx)} --- Size: {os.path.getsize(f"{self.dirname}/sFrames") if self.functionalities&self.sFramesFx else 0} bytes \n  Question video: {bool(self.functionalities&self.qVideoFx)} --- Size: {os.path.getsize(f"{self.dirname}/{self.name}qVideo.mp4") if self.functionalities&self.qVideoFx else 0} bytes \n  Solution video: {bool(self.functionalities&self.sVideoFx)} --- Size: {os.path.getsize(f"{self.dirname}/{self.name}sVideo.mp4") if self.functionalities&self.sVideoFx else 0} bytes')
-    
-myMaze:Maze = Maze((int(input("Height: ")),int(input("Width: "))),int(input("Seed: ")),input("Maze name: "),input("Directory name: "),bool(input("Question image: ")),bool(input("Solution image: ")),bool(input("Binary file: ")),bool(input("Question frames: ")),bool(input("Solution frames: ")),bool(input("Question video: ")),bool(input("Solution video: ")),int(input("Pixels pet tile: ")),int(input("Border width: ")),[48,210,197],[0,0,0],[255,255,255],float(input("Frames per second: ")))
-myMaze()
 
+height:int = int(input("Height: "))
+width:int = int(input("Width: "))
+seed:int = int(input("Seed (0 for random): "))
+print("For below questions, leave empty for default values")
+mazeName:str = input("Maze name: ")
+dirName:str = input("Directory name: ")
+print("For below questions, press enter key for NO, and type anything and enter for YES")
+qImage:bool = bool(input("Question image save: "))
+sImage:bool = bool(input("Solution image save: "))
+bFile:bool = bool(input("Binary file save: "))
+qFrames:bool = bool(input("Question frames save: "))
+sFrames:bool = bool(input("Solution frames save: "))
+qVideo:bool = bool(input("Question video save: "))
+sVideo:bool = bool(input("Solution video save: "))
+ppt:int = 0
+bw:int = 0
+fps:int = 0
+codec:str = ""
+extension:str = ""
+if qImage or sImage or qFrames or sFrames or qVideo or sVideo:
+    print("For below question, enter an integer")
+    ppt = int(input("Pixels per tile: "))
+    bw = int(input("Border width: "))
+if qVideo or sVideo:
+    print("For below question, enter an integer or float")
+    fps = float(input("Frames per second: "))
+    print("NOTE: Codec, extension and its compatibility with the codec is not checked by the program, do your research on your own. Video made using cv2 module")
+    codec = input("Codec: ")
+    extension = input("Extension: ")
+print("Generating your maze: ")
+myMaze:Maze = Maze((height,width),seed,mazeName,dirName,qImage,sImage,bFile,qFrames,sFrames,qVideo,sVideo,ppt,bw,[48,210,197],[0,0,0],[255,255,255],fps,codec,extension)
+print("Maze generated")
+myMaze()
