@@ -4,7 +4,6 @@ from PIL import Image
 import copy
 import cv2
 import numpy
-import matplotlib.pyplot as plt
 
 class Maze:
     emptyByte:bytes = 0b00000000
@@ -20,7 +19,7 @@ class Maze:
     qVideoFx:bytes = 0b00100000
     sVideoFx:bytes = 0b01000000
     
-    def __init__(self,size:tuple[int,int],seed:int,name:str,dirname:str,qImage:bool,sImage:bool,binFile:bool,qFrames:bool,sFrames:bool,qVideo:bool,sVideo:bool,ppt:int,bw:int,border:list[int],bg:list[int],solBg:list[int],spf:int) -> None:
+    def __init__(self,size:tuple[int,int],seed:int,name:str,dirname:str,qImage:bool,sImage:bool,binFile:bool,qFrames:bool,sFrames:bool,qVideo:bool,sVideo:bool,ppt:int,bw:int,border:list[int],bg:list[int],solBg:list[int],fps:int) -> None:
         self.size:tuple[int,int] = size
         self.seed:int = seed if seed else random.randint(1,1000000)
         random.seed(self.seed)
@@ -41,7 +40,7 @@ class Maze:
         self.border:list[int] = border
         self.bg:list[int] = bg
         self.solbg:list[int] = solBg
-        self.spf:int = spf
+        self.fps:int = fps
         
         self.array:bytearray = bytearray([self.emptyByte for _ in range(self.size[0]*self.size[1])])
         try:
@@ -70,10 +69,10 @@ class Maze:
             self.binarySave()
 
         if self.functionalities&self.qVideoFx:
-            self.saveVideo(f'{self.dirname}',f'{self.name}qVideo',self.qFrames,self.spf)
+            self.saveVideo(f'{self.dirname}',f'{self.name}qVideo',self.qFrames,self.fps)
         
         if self.functionalities&self.sVideoFx:
-            self.saveVideo(f'{self.dirname}',f'{self.name}sVideo',self.sFrames,self.spf)
+            self.saveVideo(f'{self.dirname}',f'{self.name}sVideo',self.sFrames,self.fps)
         return
     
     def getCoord(self,index:int) -> tuple[int,int]:
@@ -254,15 +253,17 @@ class Maze:
         file.close()
         return
 
-    def saveVideo(self,path:str,name:str,images:list[list[list[list[int]]]],spf:int) -> None:
-        videoWriter = cv2.VideoWriter(f'{path}/{name}.mp4',cv2.VideoWriter_fourcc(*'mp4v'),spf,(self.size[1]*self.ppt,self.size[0]*self.ppt))
+
+    def saveVideo(self,path:str,name:str,images:list[list[list[list[int]]]],fps:int) -> None:
+        videoWriter = cv2.VideoWriter(f'{path}/{name}.mp4',cv2.VideoWriter_fourcc(*'MJPG'),fps,(self.size[1]*self.ppt,self.size[0]*self.ppt))
         for image in images:
-            videoWriter.write(numpy.array(image))
+            videoWriter.write(cv2.cvtColor(numpy.array(image,dtype=numpy.uint8),cv2.COLOR_RGB2BGR))
         videoWriter.release()
         return
     
     def __call__(self) -> None:
         print(f'Maze: \n Seed: {self.seed} \n Height: {self.size[0]}, Width: {self.size[1]} \n Name: {self.name} \n Directory name: {self.dirname} \n Functionalities: \n  Question image: {bool(self.functionalities&self.qImageFx)} --- Size: {os.path.getsize(f"{self.dirname}/{self.name}QImage.png") if self.functionalities&self.qImageFx else 0} bytes \n  Solution image: {bool(self.functionalities&self.sImageFx)} --- Size: {os.path.getsize(f"{self.dirname}/{self.name}SImage.png") if self.functionalities&self.sImageFx else 0} bytes \n  Binary file save: {bool(self.functionalities&self.binFileFx)} --- Size: {os.path.getsize(f"{self.dirname}/{self.name}binFile.bin") if self.functionalities&self.binFileFx else 0} bytes \n  Question frames: {bool(self.functionalities&self.qFramesFx)} --- Size: {os.path.getsize(f"{self.dirname}/qFrames") if self.functionalities&self.qFramesFx else 0} bytes \n  Solution frames: {bool(self.functionalities&self.sFramesFx)} --- Size: {os.path.getsize(f"{self.dirname}/sFrames") if self.functionalities&self.sFramesFx else 0} bytes \n  Question video: {bool(self.functionalities&self.qVideoFx)} --- Size: {os.path.getsize(f"{self.dirname}/{self.name}qVideo.mp4") if self.functionalities&self.qVideoFx else 0} bytes \n  Solution video: {bool(self.functionalities&self.sVideoFx)} --- Size: {os.path.getsize(f"{self.dirname}/{self.name}sVideo.mp4") if self.functionalities&self.sVideoFx else 0} bytes')
     
-myMaze:Maze = Maze((int(input("Height: ")),int(input("Width: "))),int(input("Seed: ")),input("Maze name: "),input("Directory name: "),bool(input("Question image: ")),bool(input("Solution image: ")),bool(input("Binary file: ")),bool(input("Question frames: ")),bool(input("Solution frames: ")),bool(input("Question video: ")),bool(input("Solution video: ")),int(input("Pixels pet tile: ")),int(input("Border width: ")),[48,210,197],[0,0,0],[255,255,255],int(input("Seconds per frame: ")))
+myMaze:Maze = Maze((int(input("Height: ")),int(input("Width: "))),int(input("Seed: ")),input("Maze name: "),input("Directory name: "),bool(input("Question image: ")),bool(input("Solution image: ")),bool(input("Binary file: ")),bool(input("Question frames: ")),bool(input("Solution frames: ")),bool(input("Question video: ")),bool(input("Solution video: ")),int(input("Pixels pet tile: ")),int(input("Border width: ")),[48,210,197],[0,0,0],[255,255,255],float(input("Frames per second: ")))
 myMaze()
+
