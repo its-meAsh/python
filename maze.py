@@ -18,8 +18,9 @@ class Maze:
     sFramesFx:bytes = 0b00010000
     qVideoFx:bytes = 0b00100000
     sVideoFx:bytes = 0b01000000
+    objFileFx:bytes = 0b10000000
     
-    def __init__(self,size:tuple[int,int],seed:int,name:str,dirname:str,qImage:bool,sImage:bool,binFile:bool,qFrames:bool,sFrames:bool,qVideo:bool,sVideo:bool,ppt:int,bw:int,border:list[int],bg:list[int],solBg:list[int],fps:int,codec:str,extension:str) -> None:
+    def __init__(self,size:tuple[int,int],seed:int,name:str,dirname:str,qImage:bool,sImage:bool,binFile:bool,qFrames:bool,sFrames:bool,qVideo:bool,sVideo:bool,objFile:bool,ppt:int,bw:int,border:list[int],bg:list[int],solBg:list[int],fps:int,codec:str,extension:str) -> None:
         self.size:tuple[int,int] = size
         self.seed:int = seed if seed else random.randint(1,1000000)
         random.seed(self.seed)
@@ -34,6 +35,7 @@ class Maze:
         if sFrames: self.functionalities|=self.sFramesFx
         if qVideo: self.functionalities|=self.qVideoFx
         if sVideo: self.functionalities|=self.sVideoFx
+        if objFile: self.functionalities|=self.objFileFx
         
         self.ppt:int = ppt
         self.bw:int = bw
@@ -75,6 +77,9 @@ class Maze:
         
         if self.functionalities&self.sVideoFx:
             self.saveVideo(f'{self.dirname}',f'{self.name}sVideo',self.sFrames,self.fps)
+            
+        if self.functionalities&self.objFileFx:
+            self.saveObj(f'{self.dirname}',f'{self.name}object')
         return
     
     def getCoord(self,index:int) -> tuple[int,int]:
@@ -107,7 +112,7 @@ class Maze:
             adjacents[3] = self.getIndex((x,y-1))
         return adjacents
     
-    def imageForByte(self,byte:bytes,index:int = 0) -> list[list[list[int]]]:
+    def imageForByte(self,byte:bytes,index:int = 0,solByteCheck:bool = False) -> list[list[list[int]]]:
         image:list[list[list[int]]] = [[self.bg for j in range(self.ppt)] for i in range(self.ppt)]
         pixelCenter:int = self.ppt//2
         if not byte & self.usedByte:
@@ -133,7 +138,7 @@ class Maze:
                 for j in range(self.bw):
                     image[i][j] = self.bg
                     
-        if byte & self.solByte:
+        if byte & self.solByte and solByteCheck:
             image[pixelCenter][pixelCenter] = self.solbg
             dirnByte:bytes = self.emptyByte
             
@@ -191,7 +196,7 @@ class Maze:
         currentPos:int = 0
         targetPos:int = self.size[0]*self.size[1]-1
         path:list[int] = []
-        frames:list[list[list[list[int]]]] = [self.mazeCurrentImage()]
+        frames:list[list[list[list[int]]]] = [self.mazeCurrentImage(True)]
         while currentPos != targetPos:
             adjacents:dict[int:int] = self.getDirectedAdjacents(currentPos)
             gatesAvailable:bytes = self.emptyByte
@@ -217,21 +222,21 @@ class Maze:
             self.array[index]|=self.solByte
             if self.functionalities&(self.sFramesFx|self.sVideoFx):
                 prevImage:list[list[list[int]]] = copy.deepcopy(frames[-1])
-                self.changePosImage(prevImage,self.solPath)
+                self.changePosImage(prevImage,self.solPath,True)
                 frames.append(prevImage)
         return frames
     
-    def mazeCurrentImage(self) -> list[list[list[int]]]:
+    def mazeCurrentImage(self,solByteCheck:bool = False) -> list[list[list[int]]]:
         image:list[list[list[int]]] = [[self.bg for j in range(self.size[1]*self.ppt)] for i in range(self.size[0]*self.ppt)]
         self.array[0]|=self.byteForDirection(0)
         self.array[-1]|=self.byteForDirection(2)
-        self.changePosImage(image,range(len(self.array)))
+        self.changePosImage(image,range(len(self.array)),solByteCheck)
         return image
     
-    def changePosImage(self,image:list[list[list[int]]],indices:list[int]) -> None:
+    def changePosImage(self,image:list[list[list[int]]],indices:list[int],solByteCheck:bool = False) -> None:
         for index in indices:
             byte:bytes = self.array[index]
-            byteImage:list[list[list[int]]] = self.imageForByte(byte,index)
+            byteImage:list[list[list[int]]] = self.imageForByte(byte,index,solByteCheck)
             i,j = self.getCoord(index)
             for p in range(self.ppt):
                 for q in range(self.ppt):
@@ -262,9 +267,31 @@ class Maze:
             videoWriter.write(cv2.cvtColor(numpy.array(image,dtype=numpy.uint8),cv2.COLOR_RGB2BGR))
         videoWriter.release()
         return
-    
+        
+    def saveObj(self,path:str,name:str) -> None:
+        vertices:list[list[float]] = []
+        faces:list[list[int]] = []
+        offset:int = 0
+        for i in range(self.size[0]*self.ppt):
+            for j in range(self.size[1]*self.ppt):
+                for k in range(self.ppt):
+                    offset = len(vertices)
+                    currentImage:list[list[list[int]]] = self.mazeCurrentImage()
+                    if currentImage[i][j] == self.border or k+1>self.ppt-self.bw:
+                        vertices.extend([[i,j,k],[i+1,j,k],[i+1,j+1,k],[i,j+1,k],[i,j,k+1],[i+1,j,k+1],[i+1,j+1,k+1],[i,j+1,k+1]])
+                        faces.extend([[1+offset,2+offset,4+offset],[2+offset,3+offset,4+offset],[1+offset,4+offset,8+offset],[1+offset,5+offset,8+offset],[1+offset,2+offset,6+offset],[1+offset,5+offset,6+offset],[7+offset,8+offset,4+offset],[7+offset,3+offset,4+offset],[7+offset,3+offset,2+offset],[7+offset,6+offset,2+offset],[7+offset,8+offset,5+offset],[7+offset,6+offset,5+offset]])
+        text:str = ""
+        for vertex in vertices:
+            text+=f'v {vertex[0]} {vertex[1]} {vertex[2]} \n'
+        for face in faces:
+            text+=f'f {face[0]} {face[1]} {face[2]} \n'
+        objFile = open(f'{path}/{name}.obj','x')
+        objFile.write(text)
+        objFile.close()
+        return
+        
     def __call__(self) -> None:
-        print(f'Maze: \n Seed: {self.seed} \n Height: {self.size[0]}, Width: {self.size[1]} \n Name: {self.name} \n Directory name: {self.dirname} \n Functionalities: \n  Question image: {bool(self.functionalities&self.qImageFx)} --- Size: {os.path.getsize(f"{self.dirname}/{self.name}QImage.png") if self.functionalities&self.qImageFx else 0} bytes \n  Solution image: {bool(self.functionalities&self.sImageFx)} --- Size: {os.path.getsize(f"{self.dirname}/{self.name}SImage.png") if self.functionalities&self.sImageFx else 0} bytes \n  Binary file save: {bool(self.functionalities&self.binFileFx)} --- Size: {os.path.getsize(f"{self.dirname}/{self.name}binFile.bin") if self.functionalities&self.binFileFx else 0} bytes \n  Question frames: {bool(self.functionalities&self.qFramesFx)} --- Size: {os.path.getsize(f"{self.dirname}/qFrames") if self.functionalities&self.qFramesFx else 0} bytes \n  Solution frames: {bool(self.functionalities&self.sFramesFx)} --- Size: {os.path.getsize(f"{self.dirname}/sFrames") if self.functionalities&self.sFramesFx else 0} bytes \n  Question video: {bool(self.functionalities&self.qVideoFx)} --- Size: {os.path.getsize(f"{self.dirname}/{self.name}qVideo.mp4") if self.functionalities&self.qVideoFx else 0} bytes \n  Solution video: {bool(self.functionalities&self.sVideoFx)} --- Size: {os.path.getsize(f"{self.dirname}/{self.name}sVideo.mp4") if self.functionalities&self.sVideoFx else 0} bytes')
+        print(f'Maze: \n Seed: {self.seed} \n Height: {self.size[0]}, Width: {self.size[1]} \n Name: {self.name} \n Directory name: {self.dirname} \n Functionalities: \n  Question image: {bool(self.functionalities&self.qImageFx)} --- Size: {os.path.getsize(f"{self.dirname}/{self.name}QImage.png") if self.functionalities&self.qImageFx else 0} bytes \n  Solution image: {bool(self.functionalities&self.sImageFx)} --- Size: {os.path.getsize(f"{self.dirname}/{self.name}SImage.png") if self.functionalities&self.sImageFx else 0} bytes \n  Binary file save: {bool(self.functionalities&self.binFileFx)} --- Size: {os.path.getsize(f"{self.dirname}/{self.name}binFile.bin") if self.functionalities&self.binFileFx else 0} bytes \n  Question frames: {bool(self.functionalities&self.qFramesFx)} --- Size: {os.path.getsize(f"{self.dirname}/qFrames") if self.functionalities&self.qFramesFx else 0} bytes \n  Solution frames: {bool(self.functionalities&self.sFramesFx)} --- Size: {os.path.getsize(f"{self.dirname}/sFrames") if self.functionalities&self.sFramesFx else 0} bytes \n  Question video: {bool(self.functionalities&self.qVideoFx)} --- Size: {os.path.getsize(f"{self.dirname}/{self.name}qVideo.{self.extension}") if self.functionalities&self.qVideoFx else 0} bytes \n  Solution video: {bool(self.functionalities&self.sVideoFx)} --- Size: {os.path.getsize(f"{self.dirname}/{self.name}sVideo.{self.extension}") if self.functionalities&self.sVideoFx else 0} bytes \n  3D Model: {bool(self.functionalities&self.objFileFx)} --- Size: {os.path.getsize(f"{self.dirname}/{self.name}object.obj") if self.functionalities&self.objFileFx else 0} bytes')
 
 height:int = int(input("Height: "))
 width:int = int(input("Width: "))
@@ -280,6 +307,7 @@ qFrames:bool = bool(input("Question frames save: "))
 sFrames:bool = bool(input("Solution frames save: "))
 qVideo:bool = bool(input("Question video save: "))
 sVideo:bool = bool(input("Solution video save: "))
+objFile:bool = bool(input("3D model: "))
 ppt:int = 0
 bw:int = 0
 fps:int = 0
@@ -295,7 +323,7 @@ if qVideo or sVideo:
     print("NOTE: Codec, extension and its compatibility with the codec is not checked by the program, do your research on your own. Video made using cv2 module")
     codec = input("Codec: ")
     extension = input("Extension: ")
-print("Generating your maze: ")
-myMaze:Maze = Maze((height,width),seed,mazeName,dirName,qImage,sImage,bFile,qFrames,sFrames,qVideo,sVideo,ppt,bw,[48,210,197],[0,0,0],[255,255,255],fps,codec,extension)
+print("Generating your maze...")
+myMaze:Maze = Maze((height,width),seed,mazeName,dirName,qImage,sImage,bFile,qFrames,sFrames,qVideo,sVideo,objFile,ppt,bw,[48,210,197],[0,0,0],[255,255,255],fps,codec,extension)
 print("Maze generated")
 myMaze()
