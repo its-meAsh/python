@@ -277,7 +277,7 @@ class Maze:
                 for k in range(self.ppt):
                     offset = len(vertices)
                     currentImage:list[list[list[int]]] = self.mazeCurrentImage()
-                    if currentImage[i][j] == self.border or k+1>self.ppt-self.bw:
+                    if currentImage[i][j] == self.border or k<self.bw:
                         vertices.extend([[i,j,k],[i+1,j,k],[i+1,j+1,k],[i,j+1,k],[i,j,k+1],[i+1,j,k+1],[i+1,j+1,k+1],[i,j+1,k+1]])
                         faces.extend([[1+offset,2+offset,4+offset],[2+offset,3+offset,4+offset],[1+offset,4+offset,8+offset],[1+offset,5+offset,8+offset],[1+offset,2+offset,6+offset],[1+offset,5+offset,6+offset],[7+offset,8+offset,4+offset],[7+offset,3+offset,4+offset],[7+offset,3+offset,2+offset],[7+offset,6+offset,2+offset],[7+offset,8+offset,5+offset],[7+offset,6+offset,5+offset]])
         text:str = ""
@@ -313,7 +313,7 @@ bw:int = 0
 fps:int = 0
 codec:str = ""
 extension:str = ""
-if qImage or sImage or qFrames or sFrames or qVideo or sVideo:
+if qImage or sImage or qFrames or sFrames or qVideo or sVideo or objFile:
     print("For below question, enter an integer")
     ppt = int(input("Pixels per tile: "))
     bw = int(input("Border width: "))
