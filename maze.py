@@ -272,26 +272,23 @@ class Maze:
         vertices:list[list[float]] = []
         faces:list[list[int]] = []
         offset:int = 0
+        vText:str = ""
+        fText:str = ""
+        currentImage:list[list[list[int]]] = self.mazeCurrentImage()
         for i in range(self.size[0]*self.ppt):
             for j in range(self.size[1]*self.ppt):
                 for k in range(self.ppt):
-                    offset = len(vertices)
-                    currentImage:list[list[list[int]]] = self.mazeCurrentImage()
                     if currentImage[i][j] == self.border or k<self.bw:
-                        vertices.extend([[i,j,k],[i+1,j,k],[i+1,j+1,k],[i,j+1,k],[i,j,k+1],[i+1,j,k+1],[i+1,j+1,k+1],[i,j+1,k+1]])
-                        faces.extend([[1+offset,2+offset,4+offset],[2+offset,3+offset,4+offset],[1+offset,4+offset,8+offset],[1+offset,5+offset,8+offset],[1+offset,2+offset,6+offset],[1+offset,5+offset,6+offset],[7+offset,8+offset,4+offset],[7+offset,3+offset,4+offset],[7+offset,3+offset,2+offset],[7+offset,6+offset,2+offset],[7+offset,8+offset,5+offset],[7+offset,6+offset,5+offset]])
-        text:str = ""
-        for vertex in vertices:
-            text+=f'v {vertex[0]} {vertex[1]} {vertex[2]} \n'
-        for face in faces:
-            text+=f'f {face[0]} {face[1]} {face[2]} \n'
+                        vText+=f'v {i} {j} {k}\nv {i+1} {j} {k}\nv {i+1} {j+1} {k}\nv {i} {j+1} {k}\nv {i} {j} {k+1}\nv {i+1} {j} {k+1}\nv {i+1} {j+1} {k+1}\nv {i} {j+1} {k+1}\n'
+                        fText+=f'f {1+offset} {2+offset} {4+offset}\nf {2+offset} {3+offset} {4+offset}\nf {1+offset} {4+offset} {8+offset}\nf {1+offset} {5+offset} {8+offset}\nf {1+offset} {2+offset} {6+offset}\nf {1+offset} {5+offset} {6+offset}\nf {7+offset} {8+offset} {4+offset}\nf {7+offset} {3+offset} {4+offset}\nf {7+offset} {3+offset} {2+offset}\nf {7+offset} {6+offset} {2+offset}\nf {7+offset} {8+offset} {5+offset}\nf {7+offset} {6+offset} {5+offset}\n'
+                        offset+=8
         objFile = open(f'{path}/{name}.obj','x')
-        objFile.write(text)
+        objFile.write(vText+fText)
         objFile.close()
         return
         
     def __call__(self) -> None:
-        print(f'Maze: \n Seed: {self.seed} \n Height: {self.size[0]}, Width: {self.size[1]} \n Name: {self.name} \n Directory name: {self.dirname} \n Functionalities: \n  Question image: {bool(self.functionalities&self.qImageFx)} --- Size: {os.path.getsize(f"{self.dirname}/{self.name}QImage.png") if self.functionalities&self.qImageFx else 0} bytes \n  Solution image: {bool(self.functionalities&self.sImageFx)} --- Size: {os.path.getsize(f"{self.dirname}/{self.name}SImage.png") if self.functionalities&self.sImageFx else 0} bytes \n  Binary file save: {bool(self.functionalities&self.binFileFx)} --- Size: {os.path.getsize(f"{self.dirname}/{self.name}binFile.bin") if self.functionalities&self.binFileFx else 0} bytes \n  Question frames: {bool(self.functionalities&self.qFramesFx)} --- Size: {os.path.getsize(f"{self.dirname}/qFrames") if self.functionalities&self.qFramesFx else 0} bytes \n  Solution frames: {bool(self.functionalities&self.sFramesFx)} --- Size: {os.path.getsize(f"{self.dirname}/sFrames") if self.functionalities&self.sFramesFx else 0} bytes \n  Question video: {bool(self.functionalities&self.qVideoFx)} --- Size: {os.path.getsize(f"{self.dirname}/{self.name}qVideo.{self.extension}") if self.functionalities&self.qVideoFx else 0} bytes \n  Solution video: {bool(self.functionalities&self.sVideoFx)} --- Size: {os.path.getsize(f"{self.dirname}/{self.name}sVideo.{self.extension}") if self.functionalities&self.sVideoFx else 0} bytes \n  3D Model: {bool(self.functionalities&self.objFileFx)} --- Size: {os.path.getsize(f"{self.dirname}/{self.name}object.obj") if self.functionalities&self.objFileFx else 0} bytes')
+        print(f'Maze:\n Seed: {self.seed}\n Height: {self.size[0]}, Width: {self.size[1]}\n Name: {self.name}\n Directory name: {self.dirname}\n Functionalities:\n  Question image: {bool(self.functionalities&self.qImageFx)} --- Size: {os.path.getsize(f"{self.dirname}/{self.name}QImage.png") if self.functionalities&self.qImageFx else 0} bytes\n  Solution image: {bool(self.functionalities&self.sImageFx)} --- Size: {os.path.getsize(f"{self.dirname}/{self.name}SImage.png") if self.functionalities&self.sImageFx else 0} bytes\n  Binary file save: {bool(self.functionalities&self.binFileFx)} --- Size: {os.path.getsize(f"{self.dirname}/{self.name}binFile.bin") if self.functionalities&self.binFileFx else 0} bytes\n  Question frames: {bool(self.functionalities&self.qFramesFx)} --- Size: {os.path.getsize(f"{self.dirname}/qFrames") if self.functionalities&self.qFramesFx else 0} bytes\n  Solution frames: {bool(self.functionalities&self.sFramesFx)} --- Size: {os.path.getsize(f"{self.dirname}/sFrames") if self.functionalities&self.sFramesFx else 0} bytes\n  Question video: {bool(self.functionalities&self.qVideoFx)} --- Size: {os.path.getsize(f"{self.dirname}/{self.name}qVideo.{self.extension}") if self.functionalities&self.qVideoFx else 0} bytes\n  Solution video: {bool(self.functionalities&self.sVideoFx)} --- Size: {os.path.getsize(f"{self.dirname}/{self.name}sVideo.{self.extension}") if self.functionalities&self.sVideoFx else 0} bytes\n  3D Model: {bool(self.functionalities&self.objFileFx)} --- Size: {os.path.getsize(f"{self.dirname}/{self.name}object.obj") if self.functionalities&self.objFileFx else 0} bytes')
 
 height:int = int(input("Height: "))
 width:int = int(input("Width: "))
